@@ -1,0 +1,63 @@
+<div id="detect-result"></div>
+<script>
+    const form = document.getElementById("uploadForm");
+    const resultDiv = document.getElementById("result");
+    const detectDiv = document.getElementById("detect-result");
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById("fileInput").files[0];
+        const formData = new FormData();
+        formData.append("file", fileInput);
+
+        try {
+            const response = await fetch("/upload-eeg/", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const notes = data.notes;
+                resultDiv.innerHTML = `
+                    <div class="notes">
+                        <h3>File Details</h3>
+                        <p><strong>Filename:</strong> ${notes.filename}</p>
+                        <p><strong>Duration (s):</strong> ${notes.duration_seconds}</p>
+                        <p><strong>Channels:</strong> ${notes.channels_count}</p>
+                        <p><strong>Sampling Rate (Hz):</strong> ${notes.sampling_rate_hz}</p>
+                        <button id="detectButton">Detect</button>
+                    </div>`;
+                
+                // Thêm sự kiện cho nút Detect
+                const detectButton = document.getElementById("detectButton");
+                detectButton.addEventListener("click", async () => {
+                    try {
+                        const detectResponse = await fetch("/detect/", {
+                            method: "POST",
+                        });
+
+                        const detectData = await detectResponse.json();
+
+                        if (detectResponse.ok) {
+                            detectDiv.innerHTML = `
+                                <div class="notes">
+                                    <h3>Detection Result</h3>
+                                    <p><strong>Number of Segments:</strong> ${detectData.num_segments}</p>
+                                </div>`;
+                        } else {
+                            detectDiv.innerHTML = `<p class="error">${detectData.error}</p>`;
+                        }
+                    } catch (err) {
+                        detectDiv.innerHTML = `<p class="error">An error occurred during detection: ${err.message}</p>`;
+                    }
+                });
+            } else {
+                resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
+            }
+        } catch (err) {
+            resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
+        }
+    });
+</script>

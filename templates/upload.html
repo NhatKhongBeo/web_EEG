@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEG File Upload</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Upload EEG File</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="file" accept=".fif,.edf,.bdf,.gdf,.vhdr,.eeg,.set" required>
+        <button type="submit">Upload</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        const form = document.getElementById("uploadForm");
+        const resultDiv = document.getElementById("result");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById("fileInput").files[0];
+            const formData = new FormData();
+            formData.append("file", fileInput);
+
+            try {
+                const response = await fetch("/upload-eeg/", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const notes = data.notes;
+                    resultDiv.innerHTML = `
+                        <div class="notes">
+                            <h3>File Details</h3>
+                            <p><strong>Filename:</strong> ${notes.filename}</p>
+                            <p><strong>Duration (s):</strong> ${notes.duration_seconds}</p>
+                            <p><strong>Channels:</strong> ${notes.channels_count}</p>
+                            <p><strong>Sampling Rate (Hz):</strong> ${notes.sampling_rate_hz}</p>
+                            <button onclick="window.location.href='/detect/'">Detect</button>
+                        </div>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
