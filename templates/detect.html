@@ -35,7 +35,7 @@
                 detectButton.addEventListener("click", async () => {
                     try {
                         const detectResponse = await fetch("/detect/", {
-                            method: "POST",
+                            method: "GET",
                         });
 
                         const detectData = await detectResponse.json();

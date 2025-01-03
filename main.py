@@ -3,10 +3,12 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from signal_processing.split_data import split_segments_to_queue
-
+import torch
 import os
 import mne
 import numpy as np
+from model import get_model
+from signal_processing.transform_signal import extract_allsignal
 
 # Tạo ứng dụng FastAPI
 app = FastAPI()
@@ -25,6 +27,16 @@ SUPPORTED_FORMATS = (".fif", ".edf", ".bdf", ".gdf", ".vhdr", ".eeg", ".set")
 
 # Biến toàn cục để lưu đường dẫn file (chỉ dành cho demo)
 file_path_global = ""
+# Load model
+model = get_model()
+use_cuda = torch.cuda.is_available()
+torch.manual_seed(7)
+device = torch.device("cuda" if use_cuda else "cpu")
+if torch.cuda.device_count() > 1:
+    model = torch.nn.DataParallel(model)
+model.to(device)
+model.load_state_dict(torch.load("EEG_model.pt", weights_only=True))
+model.eval()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -111,11 +123,10 @@ async def upload_eeg(file: UploadFile = File(...)):
 
 
 
-
 @app.post("/detect/")
 async def detect_signal():
     """
-    Endpoint xử lý phát hiện tín hiệu EEG đã được normalize.
+    Endpoint xử lý phát hiện tín hiệu EEG từ các phân đoạn.
     """
     global file_path_global
 
@@ -136,14 +147,53 @@ async def detect_signal():
         # Chia dữ liệu thành các phân đoạn và xếp vào queue
         queue = split_segments_to_queue(data, sfreq)
 
-        # Trả về thông tin về số lượng phân đoạn
+        # Placeholder logic for processing
+        processed_segments = len(queue)  # Số phân đoạn đã xử lý
+
+        # Trả về thông tin kết quả detect
         return {
-            "message": "File processed and segments added to queue",
-            "num_segments": len(queue)
+            "message": "Detection complete",
+            "num_segments": processed_segments,
         }
     except Exception as e:
         return JSONResponse(
             content={"error": f"Error during detection: {str(e)}"},
             status_code=500,
         )
+
+
+@app.get("/visualize/", response_class=HTMLResponse)
+async def visualize_page(request: Request):
+    """
+    Endpoint hiển thị trang với thông tin tổng quan về dữ liệu và nút "Visual".
+    """
+    global file_path_global
+
+    if not file_path_global:
+        return HTMLResponse(content="<h1>No file found. Please upload and process a file first.</h1>", status_code=400)
+
+    try:
+        # Đọc lại file normalized
+        raw = mne.io.read_raw_fif(file_path_global, preload=True)
+
+        # Lấy dữ liệu và tần số lấy mẫu
+        data = raw.get_data()  # Dạng numpy array (channels x samples)
+        sfreq = raw.info['sfreq']
+        num_channels = data.shape[0]
+
+        # Chia dữ liệu thành các phân đoạn
+        segment_duration = 30  # giây
+        num_segments = data.shape[1] // int(segment_duration * sfreq)
+
+        # Truyền thông tin vào trang HTML
+        return templates.TemplateResponse(
+            "visualize.html",
+            {
+                "request": request,
+                "num_segments": num_segments,
+                "num_channels": num_channels,
+            },
+        )
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error during visualization: {str(e)}</h1>", status_code=500)
 

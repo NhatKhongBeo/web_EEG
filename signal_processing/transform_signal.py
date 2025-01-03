@@ -69,15 +69,40 @@ def extract_mel_spectrogram(signal_data,sfreq=256,time_seg=1,n_mels=128,
     mel_spectrogram_db = 10 * np.log10(np.maximum(mel_spectrogram, 1e-10))
     return mel_spectrogram_db, t
 
-def extract_allsignal(signal, time_seg=0.5):
+def extract_allsignal(signal, time_seg=0.5, n_mels=128, fmin=0.5, fmax=None):
+    """
+    Compute Mel-spectrograms for all channels of the EEG signal.
+
+    Parameters:
+    - signal: mne.io.Raw object containing the EEG data
+    - time_seg: Segment duration in seconds
+    - n_mels: Number of Mel bands
+    - fmin: Minimum frequency for the Mel filter bank (Hz)
+    - fmax: Maximum frequency for the Mel filter bank (Hz)
+
+    Returns:
+    - mel_spectrograms: numpy array of shape (channels, mel_bins, time_steps)
+    """
     mel_spectrograms = []
-    
+
+    # Get data and apply a Hann window
     data, _ = signal[:]
-    data = data * scipy.signal.windows.hann(data.shape[1])
-    for i,channels_name in enumerate(signal.ch_names):
-        mel_spectrogram,t = extract_mel_spectrogram(data[i],signal.info['sfreq'],time_seg)
+    data *= scipy.signal.windows.hann(data.shape[1])
+
+    # Compute Mel-spectrogram for each channel
+    for i, channel_name in enumerate(signal.ch_names):
+        mel_spectrogram, _ = extract_mel_spectrogram(
+            signal_data=data[i],
+            sfreq=signal.info['sfreq'],
+            time_seg=time_seg,
+            n_mels=n_mels,
+            fmin=fmin,
+            fmax=fmax
+        )
         mel_spectrograms.append(mel_spectrogram)
+
     mel_spectrograms = np.array(mel_spectrograms)
     return mel_spectrograms
+
 
 

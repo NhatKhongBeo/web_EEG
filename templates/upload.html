@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>Upload EEG File</h1>
+    <h1>Upload and Detect EEG File</h1>
     <form id="uploadForm" enctype="multipart/form-data">
         <input type="file" id="fileInput" name="file" accept=".fif,.edf,.bdf,.gdf,.vhdr,.eeg,.set" required>
         <button type="submit">Upload</button>
@@ -18,6 +18,7 @@
         const form = document.getElementById("uploadForm");
         const resultDiv = document.getElementById("result");
 
+        // Xử lý khi người dùng nhấn nút "Upload"
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const fileInput = document.getElementById("fileInput").files[0];
@@ -41,8 +42,14 @@
                             <p><strong>Duration (s):</strong> ${notes.duration_seconds}</p>
                             <p><strong>Channels:</strong> ${notes.channels_count}</p>
                             <p><strong>Sampling Rate (Hz):</strong> ${notes.sampling_rate_hz}</p>
-                            <button onclick="window.location.href='/detect/'">Detect</button>
+                            <button id="detectButton">Detect</button>
                         </div>`;
+
+                    // Thêm sự kiện "Detect"
+                    const detectButton = document.getElementById("detectButton");
+                    detectButton.addEventListener("click", () => {
+                        window.location.href = "/visualize/";
+                    });
                 } else {
                     resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
                 }

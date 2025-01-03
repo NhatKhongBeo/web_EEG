@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEG Visualization</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>EEG Data Overview</h1>
+    <p><strong>Total Segments:</strong> {{ num_segments }}</p>
+    <p><strong>Total Channels:</strong> {{ num_channels }}</p>
+    <button id="visualizeButton">Visual</button>
+    <div id="result"></div>
+
+    <script>
+        const visualizeButton = document.getElementById("visualizeButton");
+        const resultDiv = document.getElementById("result");
+
+        // Xử lý khi người dùng nhấn nút "Visual"
+        visualizeButton.addEventListener("click", async () => {
+            try {
+                const response = await fetch("/detect/", {
+                    method: "POST",
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="notes">
+                            <h3>Detection Results</h3>
+                            <p><strong>Message:</strong> ${data.message}</p>
+                            <p><strong>Number of Segments Processed:</strong> ${data.num_segments}</p>
+                        </div>`;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="error">An error occurred during visualization: ${err.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
